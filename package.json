@@ -1,0 +1,42 @@
+{
+  "name": "nakama-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Heroic Labs Nakama — wraps the client (:7350) and console (:7351) APIs via a search+execute pattern plus high-value convenience tools.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "nakama-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "data/catalog.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "regen-catalog": "node scripts/regen-catalog.mjs",
+    "prepublishOnly": "npm run build",
+    "test:integration": "node test/integration.mjs",
+    "test:smoke": "node test/smoke.mjs",
+    "test:resolve": "node test/resolve.test.mjs",
+    "test": "npm run test:resolve && npm run test:redact && npm run test:smoke",
+    "mcpb:build": "tsc && node scripts/build-mcpb.mjs",
+    "mcpb:pack": "npx -y @anthropic-ai/mcpb pack mcpb-build dist-mcpb/nakama-mcp.mcpb",
+    "mcpb": "npm run mcpb:build && npm run mcpb:pack",
+    "test:redact": "node test/redact.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.5.0"
+  }
+}

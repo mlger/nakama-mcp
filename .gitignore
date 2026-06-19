@@ -1,0 +1,7 @@
+*.log
+.claude/
+.env
+dist-mcpb/
+dist/
+mcpb-build/
+node_modules/

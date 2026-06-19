@@ -1,0 +1,87 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
+  "manifest_version": "0.4",
+  "name": "nakama-mcp",
+  "display_name": "Nakama",
+  "version": "0.1.0",
+  "description": "Talk to a Heroic Labs Nakama server — client (:7350) and console (:7351) APIs via search+execute plus convenience tools.",
+  "long_description": "An MCP server for Heroic Labs Nakama. Exposes ~180 operations across the player-facing client API and the admin console API using a search+execute pattern, plus promoted tools for common jobs (player auth, storage, leaderboards, notifications, ban/unban, server status). Point it at any running Nakama instance.",
+  "author": { "name": "Mark" },
+  "license": "Apache-2.0",
+  "keywords": ["nakama", "heroiclabs", "game-backend", "gamedev", "mcp"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.mjs"],
+      "env": {
+        "NAKAMA_HOST": "${user_config.host}",
+        "NAKAMA_PORT": "${user_config.client_port}",
+        "NAKAMA_CONSOLE_PORT": "${user_config.console_port}",
+        "NAKAMA_USE_SSL": "${user_config.use_ssl}",
+        "NAKAMA_SERVER_KEY": "${user_config.server_key}",
+        "NAKAMA_CONSOLE_USERNAME": "${user_config.console_username}",
+        "NAKAMA_CONSOLE_PASSWORD": "${user_config.console_password}"
+      }
+    }
+  },
+  "user_config": {
+    "host": {
+      "type": "string",
+      "title": "Nakama host",
+      "description": "Hostname or IP of the Nakama server (both client and console APIs).",
+      "default": "127.0.0.1",
+      "required": false
+    },
+    "client_port": {
+      "type": "number",
+      "title": "Client API port",
+      "description": "Port for the player-facing client API.",
+      "default": 7350,
+      "required": false
+    },
+    "console_port": {
+      "type": "number",
+      "title": "Console API port",
+      "description": "Port for the admin console API.",
+      "default": 7351,
+      "required": false
+    },
+    "use_ssl": {
+      "type": "boolean",
+      "title": "Use HTTPS",
+      "description": "Connect over HTTPS instead of HTTP.",
+      "default": false,
+      "required": false
+    },
+    "server_key": {
+      "type": "string",
+      "title": "Server key",
+      "description": "Server key used for client authenticate endpoints.",
+      "default": "defaultkey",
+      "sensitive": true,
+      "required": false
+    },
+    "console_username": {
+      "type": "string",
+      "title": "Console username",
+      "description": "Admin username for the console API.",
+      "default": "admin",
+      "required": false
+    },
+    "console_password": {
+      "type": "string",
+      "title": "Console password",
+      "description": "Admin password for the console API.",
+      "default": "password",
+      "sensitive": true,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "node": ">=18.0.0" }
+  }
+}
