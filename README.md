@@ -1,12 +1,33 @@
 # nakama-mcp
 
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](#license)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-339933.svg?logo=node.js&logoColor=white)](#prerequisites)
+[![MCP](https://img.shields.io/badge/MCP-server-6E56CF.svg)](https://modelcontextprotocol.io)
+
 An MCP (Model Context Protocol) server for [Heroic Labs Nakama](https://github.com/heroiclabs/nakama).
 It lets Claude (or any MCP host) talk to a running Nakama instance across **both** of its HTTP APIs:
 
 - **Client API** (`:7350`) — player-facing: authentication, accounts, friends, groups, storage, leaderboards, tournaments, RPCs, …
 - **Console API** (`:7351`) — admin/operations: search players, inspect & edit storage, leaderboards, active matches, server status & metrics, …
 
-Nakama exposes ~180 operations across the two surfaces, so this server uses a **search + execute** design instead of one tool per endpoint, plus a handful of promoted convenience tools for the most common jobs.
+Nakama exposes ~180 operations (87 client, 92 console) across the two surfaces, so this server uses a **search + execute** design instead of one tool per endpoint, plus a handful of promoted convenience tools for the most common jobs.
+
+## Contents
+
+- [Tools](#tools)
+- [Quick start](#quick-start)
+- [Prerequisites](#prerequisites)
+- [Install & build](#install--build)
+- [Configuration](#configuration)
+- [Add to an MCP host](#add-to-an-mcp-host)
+- [How auth works](#how-auth-works)
+- [Usage examples (what to ask Claude)](#usage-examples-what-to-ask-claude)
+- [Testing against a real Nakama](#testing-against-a-real-nakama)
+- [Continuous integration](#continuous-integration)
+- [Regenerating the API catalog](#regenerating-the-api-catalog)
+- [Install as a desktop extension (MCPB)](#install-as-a-desktop-extension-mcpb)
+- [Distribution / upgrade path](#distribution--upgrade-path)
+- [License](#license)
 
 ## Tools
 
@@ -34,6 +55,23 @@ Nakama exposes ~180 operations across the two surfaces, so this server uses a **
 - **Healthcheck** — `nakama_healthcheck` probes both surfaces (and verifies admin login); use it first when calls fail.
 
 Typical flow: ask `nakama_search_actions` for what you want → take the `action_id` → call `nakama_execute_action`. The promoted tools are shortcuts for frequent reads.
+
+## Quick start
+
+```bash
+npm install && npm run build                                 # 1. build the server
+claude mcp add nakama -- node "$(pwd)/dist/index.js"          # 2. add to Claude Code
+```
+
+3. Point it at your Nakama with `NAKAMA_*` env vars (defaults match a stock local dev setup — see [Configuration](#configuration)), then ask Claude something from the [examples](#usage-examples-what-to-ask-claude).
+
+Using Claude Desktop instead of Claude Code? See [Add to an MCP host](#add-to-an-mcp-host). No Node toolchain? Install the [desktop extension (MCPB)](#install-as-a-desktop-extension-mcpb).
+
+## Prerequisites
+
+- **Node.js `>=18`** — required to build and run the server.
+- **A running Nakama instance** to connect to. Don't have one? The bundled `docker-compose.yml` spins up Nakama + CockroachDB locally (see [Testing against a real Nakama](#testing-against-a-real-nakama)).
+- **Docker** — only needed if you run the integration test or use the bundled compose file.
 
 ## Install & build
 
