@@ -36,6 +36,12 @@ export async function startHttpServer(cfg: NakamaConfig, http: HttpConfig): Prom
   const sharedConsoleAuth: ConsoleAuth = {};
   const sessions = new Map<string, Session>();
 
+  const sweep = setInterval(
+    () => reapIdleSessions(sessions, http.sessionTtlMs),
+    Math.max(1000, Math.floor(http.sessionTtlMs / 4)),
+  );
+  sweep.unref();
+
   const authOk = (req: IncomingMessage): boolean => {
     if (!http.authToken) return true;
     return req.headers["authorization"] === `Bearer ${http.authToken}`;
@@ -106,6 +112,7 @@ export async function startHttpServer(cfg: NakamaConfig, http: HttpConfig): Prom
   });
 
   const shutdown = () => {
+    clearInterval(sweep);
     for (const s of sessions.values()) void s.transport.close();
     server.close();
   };
@@ -121,4 +128,21 @@ export async function startHttpServer(cfg: NakamaConfig, http: HttpConfig): Prom
   if (!http.authToken) {
     process.stderr.write("nakama-mcp warning: MCP_AUTH_TOKEN is not set; endpoint is unauthenticated (loopback only).\n");
   }
+}
+
+/** Close and remove sessions idle longer than ttlMs. Returns reaped session ids. */
+export function reapIdleSessions(
+  sessions: Map<string, { transport: { close(): unknown }; lastActivity: number }>,
+  ttlMs: number,
+  now: number = Date.now(),
+): string[] {
+  const reaped: string[] = [];
+  for (const [sid, s] of sessions) {
+    if (now - s.lastActivity > ttlMs) {
+      sessions.delete(sid);
+      void s.transport.close();
+      reaped.push(sid);
+    }
+  }
+  return reaped;
 }
