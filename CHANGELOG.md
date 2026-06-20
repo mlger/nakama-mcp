@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remote streamable-HTTP transport (`MCP_TRANSPORT=http`): stateful, multi-client, with
   per-session isolated player sessions, shared console admin login, a static bearer token
   (`MCP_AUTH_TOKEN`), a non-loopback bind guardrail, `GET /healthz`, and an idle-session reaper.
+- README: a Troubleshooting section, a Security & disclaimer section, and copy-paste MCP
+  config for Cursor, Windsurf, and VS Code.
+- Server version is now sourced from `package.json` (single source of truth); the MCPB
+  bundle stages `package.json` so the bundled server reports the same version.
+
+### Changed
+
+- The "Failed to reach Nakama" connection error now points at `nakama_healthcheck`.
 - Community health files: `LICENSE` (Apache-2.0), `CONTRIBUTING.md`,
   `SECURITY.md`, `CHANGELOG.md`, and Dependabot config.
 

@@ -90,6 +90,42 @@ See `.env.example`. These are **secrets** — prefer your MCP host's env config 
 claude mcp add nakama -- node /absolute/path/to/nakama-mcp/dist/index.js
 ```
 
+### Cursor / Windsurf (`~/.cursor/mcp.json` or `~/.codeium/windsurf/mcp_config.json`)
+
+Both read the same `mcpServers` shape as Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "nakama": {
+      "command": "node",
+      "args": ["/absolute/path/to/nakama-mcp/dist/index.js"],
+      "env": { "NAKAMA_SERVER_KEY": "defaultkey", "NAKAMA_CONSOLE_PASSWORD": "password" }
+    }
+  }
+}
+```
+
+### VS Code (`.vscode/mcp.json`)
+
+VS Code nests servers under a top-level `servers` key:
+
+```json
+{
+  "servers": {
+    "nakama": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/nakama-mcp/dist/index.js"],
+      "env": { "NAKAMA_SERVER_KEY": "defaultkey", "NAKAMA_CONSOLE_PASSWORD": "password" }
+    }
+  }
+}
+```
+
+> Any MCP-capable host works — point it at `node /absolute/path/to/nakama-mcp/dist/index.js`
+> over stdio (env vars default to a stock local Nakama), or at the [Remote HTTP transport](#remote-http-transport) below.
+
 ## Remote HTTP transport
 
 By default the server speaks **stdio**. Set `MCP_TRANSPORT=http` to run it as a
@@ -131,6 +167,23 @@ exposed. The endpoint is plain HTTP — terminate TLS at a reverse proxy for pub
 - "Authenticate as device `demo-1`, then write a storage object in collection `saves`."
 - "Call the `healthcheck` RPC."
 
+## Troubleshooting
+
+**When in doubt, ask Claude to run `nakama_healthcheck` first** — it probes both API surfaces and verifies admin login, and pinpoints which side is failing.
+
+| Symptom | Likely cause & fix |
+|---|---|
+| `Failed to reach Nakama at http://127.0.0.1:7350` | Nakama isn't running or host/port/SSL are wrong. Start it (`docker compose up -d --wait`) and check `NAKAMA_HOST` / `NAKAMA_PORT` / `NAKAMA_USE_SSL`. |
+| `No player session yet … call nakama_authenticate first` | A client (`:7350`) endpoint was used without a session. Run `nakama_authenticate` (device/custom/email) before other player calls. |
+| `Console login did not return a token` | Wrong admin creds. Check `NAKAMA_CONSOLE_USERNAME` / `NAKAMA_CONSOLE_PASSWORD` (defaults `admin` / `password`). |
+| Client authenticate returns HTTP 401 | Wrong `NAKAMA_SERVER_KEY` (default `defaultkey`). |
+| `Unknown action_id '…'` | Use `nakama_search_actions` to find the exact id; the error also suggests close matches. |
+| HTTP mode: every `/mcp` request returns `401` | Missing/incorrect `Authorization: Bearer <MCP_AUTH_TOKEN>` header. |
+| HTTP mode: server won't start, "Refusing to bind …" | You bound a non-loopback host without `MCP_AUTH_TOKEN`. Set a token, or bind `127.0.0.1`. |
+| Tools don't appear in your MCP host | Point the host at the **absolute** path to `dist/index.js`, run `npm run build` first, and restart the host (configs are read at startup). |
+
+The server logs to **stderr** only (stdout is the protocol stream). In Claude Desktop, check the MCP logs; for the integration test set `VERBOSE=1`.
+
 ## Testing against a real Nakama
 
 A `docker-compose.yml` (Nakama 3.37.0 + CockroachDB) and a live integration test are included.
@@ -152,13 +205,13 @@ Set `VERBOSE=1` to see server logs. It honors the same `NAKAMA_*` env vars as th
 
 `.github/workflows/ci.yml` runs on every push and PR:
 
-- **smoke** — `npm ci` → build → `npm run test:resolve` + `npm run test:redact` + `npm run test:smoke` (unit + protocol surface; no Nakama). Fast.
+- **smoke** — `npm ci` → build → `resolve` + `redact` + `smoke` + `http` + `http-reaper` + `version` (unit + stdio/HTTP protocol surface; no Nakama). Fast.
 - **integration** — boots Nakama + CockroachDB with `docker compose up --wait`, then runs `npm run test:integration`, dumps server logs on failure, and tears down.
 
 Run the same checks locally:
 
 ```bash
-npm test                   # resolver + smoke, no server needed
+npm test                   # full fast suite, no server needed
 npm run test:integration   # needs `docker compose up -d`
 ```
 
@@ -188,7 +241,7 @@ npm run mcpb        # builds mcpb-build/ and packs dist-mcpb/nakama-mcp.mcpb
 
 `npm run mcpb` runs two steps you can also run separately:
 
-- `npm run mcpb:build` — type-checks, bundles the server with esbuild into `mcpb-build/server/index.mjs`, and stages `manifest.json` + `data/catalog.json`.
+- `npm run mcpb:build` — type-checks, bundles the server with esbuild into `mcpb-build/server/index.mjs`, and stages `manifest.json`, `data/catalog.json`, and `package.json` (the server reads its version from it).
 - `npm run mcpb:pack` — packs `mcpb-build/` into `dist-mcpb/nakama-mcp.mcpb` (validates the manifest). A plain `cd mcpb-build && zip -r ../dist-mcpb/nakama-mcp.mcpb .` also works.
 
 Then **drag `dist-mcpb/nakama-mcp.mcpb` onto Claude Desktop** to install. The installer prompts for
@@ -200,13 +253,23 @@ username/password); the server key and console password are stored in the OS key
 
 ## Distribution / upgrade path
 
-This is a **local stdio** server — the fastest shape to prototype and run against your own Nakama.
-For wider distribution to people who don't have Node set up, the recommended next steps are:
+Stdio (the default) is the fastest shape to prototype and run against your own Nakama. Two paths cover wider distribution:
 
 - **MCPB bundle** — package the server with its Node runtime so it installs without prerequisites (best when it still needs to reach a Nakama the user runs locally).
-- **Remote streamable-HTTP** — host it once behind a URL (best if it targets a shared/cloud Nakama); add OAuth there if needed.
+- **Remote streamable-HTTP** — already built in (`MCP_TRANSPORT=http`); host it once behind a URL (best if it targets a shared/cloud Nakama). Add OAuth in front if you need more than the static bearer token.
 
-The tool layer and Nakama client are transport-agnostic, so moving to either is mostly swapping `StdioServerTransport` in `src/index.ts`.
+The tool layer and Nakama client are transport-agnostic — both transports build the same server via `buildMcpServer()` in `src/server.ts`.
+
+## Security & disclaimer
+
+This server gives an AI model real, **write-capable** access to your Nakama instance. `nakama_execute_action` can call *any* operation in the catalog, and the console (`:7351`) tools act with **admin** authority — they can write/delete storage, send notifications, and **ban or unban accounts**. Treat it accordingly:
+
+- **Point it at a dev/staging Nakama, not production**, until you trust the workflow. Operations are real and some are irreversible.
+- **Keep credentials in your MCP host's env/secret store**, not in committed files. The server key and console password are **secrets**; error output is scrubbed of them (plus JWTs and `Basic`/`Bearer` headers) before it reaches the model, but don't paste them into prompts.
+- **Remote HTTP:** always set `MCP_AUTH_TOKEN`, and don't expose the endpoint without TLS in front. A non-loopback bind without a token is refused by design.
+- **No telemetry.** The server makes network calls **only** to the Nakama you configure — nothing is sent to any third party.
+
+This is an independent, community integration — not an official Heroic Labs product. Use at your own risk; see [SECURITY.md](SECURITY.md) to report a vulnerability privately.
 
 ## Contributing & security
 
