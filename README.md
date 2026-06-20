@@ -1,5 +1,9 @@
 # nakama-mcp
 
+[![CI](https://github.com/mlger/nakama-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/mlger/nakama-mcp/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
+
 An MCP (Model Context Protocol) server for [Heroic Labs Nakama](https://github.com/heroiclabs/nakama).
 It lets Claude (or any MCP host) talk to a running Nakama instance across **both** of its HTTP APIs:
 
@@ -177,6 +181,12 @@ For wider distribution to people who don't have Node set up, the recommended nex
 
 The tool layer and Nakama client are transport-agnostic, so moving to either is mostly swapping `StdioServerTransport` in `src/index.ts`.
 
+## Contributing & security
+
+- Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup and the two-tier test workflow.
+- Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
+- Found a security issue? Please report it privately — see [SECURITY.md](SECURITY.md). Don't open a public issue.
+
 ## License
 
-Apache-2.0. Nakama is a trademark of Heroic Labs; this is an independent integration.
+Apache-2.0 — see [LICENSE](LICENSE). Nakama is a trademark of Heroic Labs; this is an independent integration.
