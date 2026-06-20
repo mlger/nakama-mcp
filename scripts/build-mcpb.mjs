@@ -26,5 +26,8 @@ await build({
 
 copyFileSync(join(root, "data", "catalog.json"), join(out, "data", "catalog.json"));
 copyFileSync(join(root, "manifest.json"), join(out, "manifest.json"));
+// Staged so the bundled server can read its version from package.json at runtime
+// (src/version.ts resolves ../package.json relative to server/index.mjs).
+copyFileSync(join(root, "package.json"), join(out, "package.json"));
 
-console.log("Assembled mcpb-build/ (server/index.mjs, data/catalog.json, manifest.json)");
+console.log("Assembled mcpb-build/ (server/index.mjs, data/catalog.json, manifest.json, package.json)");
