@@ -90,6 +90,33 @@ See `.env.example`. These are **secrets** — prefer your MCP host's env config 
 claude mcp add nakama -- node /absolute/path/to/nakama-mcp/dist/index.js
 ```
 
+## Remote HTTP transport
+
+By default the server speaks **stdio**. Set `MCP_TRANSPORT=http` to run it as a
+network-reachable streamable-HTTP server that multiple MCP clients can share. It still
+targets the single Nakama configured by your `NAKAMA_*` vars; each connected MCP client
+gets its own isolated player session, and the console admin login is shared.
+
+| Variable | Default | Notes |
+|---|---|---|
+| `MCP_TRANSPORT` | `stdio` | Set to `http` to enable the HTTP server. |
+| `MCP_HTTP_HOST` | `127.0.0.1` | Bind address. Loopback by default. |
+| `MCP_HTTP_PORT` | `3000` | Listen port. |
+| `MCP_HTTP_PATH` | `/mcp` | MCP endpoint path. |
+| `MCP_AUTH_TOKEN` | _(unset)_ | Static bearer token required in `Authorization: Bearer …`. |
+| `MCP_SESSION_TTL_MS` | `1800000` | Idle session timeout (30 min). |
+
+```bash
+MCP_TRANSPORT=http MCP_AUTH_TOKEN=s3cret npm start
+# nakama-mcp ready -> http://127.0.0.1:3000/mcp (transport=http, auth=on)
+curl -s http://127.0.0.1:3000/healthz   # -> {"ok":true}
+```
+
+**Security:** if you bind a non-loopback address (e.g. `MCP_HTTP_HOST=0.0.0.0`) the server
+**refuses to start** unless `MCP_AUTH_TOKEN` is set, so Nakama admin is never accidentally
+exposed. The endpoint is plain HTTP — terminate TLS at a reverse proxy for public hosting.
+`GET /healthz` is unauthenticated for load balancers; all `/mcp` traffic requires the token.
+
 ## How auth works
 
 - **Console API**: the server auto-logs-in with `NAKAMA_CONSOLE_USERNAME` / `NAKAMA_CONSOLE_PASSWORD` on first use, caches the JWT, and refreshes when it expires. You don't call a login tool.

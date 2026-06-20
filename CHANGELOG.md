@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Remote streamable-HTTP transport (`MCP_TRANSPORT=http`): stateful, multi-client, with
+  per-session isolated player sessions, shared console admin login, a static bearer token
+  (`MCP_AUTH_TOKEN`), a non-loopback bind guardrail, `GET /healthz`, and an idle-session reaper.
 - Community health files: `LICENSE` (Apache-2.0), `CONTRIBUTING.md`,
   `SECURITY.md`, `CHANGELOG.md`, and Dependabot config.
 

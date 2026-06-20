@@ -1,23 +1,21 @@
 #!/usr/bin/env node
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { loadConfig } from "./config.js";
-import { NakamaClient } from "./nakama.js";
-import { registerTools } from "./tools.js";
+import { loadConfig, loadHttpConfig } from "./config.js";
 import { registerSecrets } from "./redact.js";
+import { buildMcpServer } from "./server.js";
+import { startHttpServer } from "./http.js";
 
 async function main(): Promise<void> {
   const cfg = loadConfig();
-  registerSecrets([cfg.serverKey, cfg.consolePassword]);
-  const nakama = new NakamaClient(cfg);
+  const http = loadHttpConfig();
+  registerSecrets([cfg.serverKey, cfg.consolePassword, http.authToken]);
 
-  const server = new McpServer({
-    name: "nakama-mcp",
-    version: "0.1.0",
-  });
+  if (http.transport === "http") {
+    await startHttpServer(cfg, http);
+    return;
+  }
 
-  registerTools(server, nakama);
-
+  const server = buildMcpServer(cfg);
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stderr is safe for logs; stdout is reserved for the MCP protocol.

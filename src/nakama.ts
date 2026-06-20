@@ -39,6 +39,11 @@ interface TokenState {
   expiresAt?: number;
 }
 
+export interface ConsoleAuth {
+  token?: TokenState;
+  inFlight?: Promise<void>;
+}
+
 function decodeJwtExpMs(token: string): number | undefined {
   try {
     const part = token.split(".")[1];
@@ -53,9 +58,11 @@ function decodeJwtExpMs(token: string): number | undefined {
 
 export class NakamaClient {
   private session?: TokenState; // player session (client API)
-  private consoleToken?: TokenState; // console admin token
+  private consoleAuth: ConsoleAuth; // console admin token holder (shareable)
 
-  constructor(private cfg: NakamaConfig) {}
+  constructor(private cfg: NakamaConfig, consoleAuth?: ConsoleAuth) {
+    this.consoleAuth = consoleAuth ?? {};
+  }
 
   private baseUrl(surface: Surface): string {
     const proto = this.cfg.useSsl ? "https" : "http";
@@ -87,7 +94,7 @@ export class NakamaClient {
     // console
     if (path === "/v2/console/authenticate") return undefined;
     await this.ensureConsole();
-    return `Bearer ${this.consoleToken!.token}`;
+    return `Bearer ${this.consoleAuth.token!.token}`;
   }
 
   async request<T = unknown>(opts: RequestOpts): Promise<T> {
@@ -144,17 +151,26 @@ export class NakamaClient {
   }
 
   private async ensureConsole(): Promise<void> {
-    const valid = this.consoleToken && (!this.consoleToken.expiresAt || this.consoleToken.expiresAt > Date.now() + 5000);
+    const a = this.consoleAuth;
+    const valid = a.token && (!a.token.expiresAt || a.token.expiresAt > Date.now() + 5000);
     if (valid) return;
-    const data = await this.request<{ token: string; refresh_token?: string }>({
-      surface: "console",
-      method: "POST",
-      path: "/v2/console/authenticate",
-      body: { username: this.cfg.consoleUsername, password: this.cfg.consolePassword },
-      authOverride: null,
-    });
-    if (!data?.token) throw new Error("Console login did not return a token. Check NAKAMA_CONSOLE_USERNAME / NAKAMA_CONSOLE_PASSWORD.");
-    this.consoleToken = { token: data.token, refreshToken: data.refresh_token, expiresAt: decodeJwtExpMs(data.token) };
+    if (a.inFlight) return a.inFlight;
+    a.inFlight = (async () => {
+      const data = await this.request<{ token: string; refresh_token?: string }>({
+        surface: "console",
+        method: "POST",
+        path: "/v2/console/authenticate",
+        body: { username: this.cfg.consoleUsername, password: this.cfg.consolePassword },
+        authOverride: null,
+      });
+      if (!data?.token) throw new Error("Console login did not return a token. Check NAKAMA_CONSOLE_USERNAME / NAKAMA_CONSOLE_PASSWORD.");
+      a.token = { token: data.token, refreshToken: data.refresh_token, expiresAt: decodeJwtExpMs(data.token) };
+    })();
+    try {
+      await a.inFlight;
+    } finally {
+      a.inFlight = undefined;
+    }
   }
 
   /** Authenticate a player against the client API and store the session token. */
