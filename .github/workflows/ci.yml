@@ -26,6 +26,7 @@ jobs:
       - run: npm run test:smoke
       - run: npm run test:http
       - run: npm run test:http-reaper
+      - run: npm run test:version
 
   integration:
     name: Integration (live Nakama via Compose)

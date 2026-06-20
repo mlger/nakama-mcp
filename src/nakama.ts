@@ -134,7 +134,7 @@ export class NakamaClient {
       });
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to reach Nakama at ${url.origin} (${reason}). Check that the server is running and host/port/SSL settings are correct.`);
+      throw new Error(`Failed to reach Nakama at ${url.origin} (${reason}). Check that the server is running and host/port/SSL settings are correct. Run nakama_healthcheck to probe both API surfaces.`);
     }
 
     const text = await res.text();
