@@ -66,6 +66,20 @@ async function check(label, fn) {
 }
 const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
 
+// Compare storage values by semantic JSON equality, not byte-for-byte: the
+// backend (CockroachDB JSONB) renders stored JSON with its own whitespace and
+// key ordering, so a literal string compare is brittle across server versions.
+const canonicalJson = (v) => {
+  const parsed = typeof v === "string" ? JSON.parse(v) : v;
+  const sort = (x) =>
+    Array.isArray(x)
+      ? x.map(sort)
+      : x && typeof x === "object"
+        ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, sort(x[k])]))
+        : x;
+  return JSON.stringify(sort(parsed));
+};
+
 console.log("nakama-mcp integration test\n");
 
 try {
@@ -131,7 +145,7 @@ try {
     assert(!r.isError, r.text);
     const obj = r.data?.objects?.[0];
     assert(obj, "object not found on read-back");
-    assert(obj.value === value, `value mismatch: ${obj.value}`);
+    assert(canonicalJson(obj.value) === canonicalJson(value), `value mismatch: ${obj.value}`);
     return "round-trip value matches";
   });
 
@@ -143,7 +157,7 @@ try {
     assert(!w.isError, w.text);
     const r = await callTool("nakama_execute_action", { action_id: "Nakama_ReadStorageObjects", body: { object_ids: [{ collection: c2, key: k2, user_id: userId }] } });
     assert(!r.isError, r.text);
-    assert(r.data?.objects?.[0]?.value === JSON.stringify(v2), "value mismatch via promoted tool");
+    assert(canonicalJson(r.data?.objects?.[0]?.value) === canonicalJson(v2), "value mismatch via promoted tool");
     return "written & read via promoted tool";
   });
 
