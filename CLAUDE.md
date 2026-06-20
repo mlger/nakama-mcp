@@ -76,11 +76,9 @@ Generated, **committed**, and shipped (listed in `package.json` `files`). `scrip
 
 ## Testing notes
 
-Two tiers:
+Two tiers, both gating CI (`.github/workflows/ci.yml`):
 
-- **fast** (`npm test` = `resolve` + `redact` + `smoke` + `http` + `http-reaper`) — pure unit + MCP protocol surface (stdio **and** HTTP), no Nakama. The HTTP test spawns the built server on an ephemeral port and drives it with the SDK client; `tools/list` needs no Nakama. Run on every change.
+- **fast** (`npm test` = `resolve` + `redact` + `smoke` + `http` + `http-reaper`) — pure unit + MCP protocol surface (stdio **and** HTTP), no Nakama. The HTTP test spawns the built server on an ephemeral port and drives it with the SDK client; `tools/list` needs no Nakama. The CI `smoke` job runs these five as individual steps. Run on every change.
 - **integration** — boots Nakama 3.37.0 + CockroachDB via `docker-compose.yml` (`docker compose up --wait`), then drives the built server over stdio end-to-end (tools/list, console login + status, list/get account, device auth, storage write/read). Honors the same `NAKAMA_*` env vars; defaults match the bundled compose. `VERBOSE=1` surfaces server logs.
-
-> **CI gap:** `.github/workflows/ci.yml` invokes `test:resolve` + `test:redact` + `test:smoke` individually, then `test:integration` — it does **not** yet run `test:http` / `test:http-reaper`. The HTTP transport is covered locally by `npm test` but not in CI. Wire the two scripts (or switch the job to `npm test`) into the smoke job to close this.
 
 Run `npm run build && npm test` before any PR; run integration too if you touch the client, tools, or catalog.
