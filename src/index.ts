@@ -1,12 +1,19 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, loadHttpConfig } from "./config.js";
 import { registerSecrets } from "./redact.js";
 import { buildMcpServer } from "./server.js";
+import { startHttpServer } from "./http.js";
 
 async function main(): Promise<void> {
   const cfg = loadConfig();
-  registerSecrets([cfg.serverKey, cfg.consolePassword]);
+  const http = loadHttpConfig();
+  registerSecrets([cfg.serverKey, cfg.consolePassword, http.authToken]);
+
+  if (http.transport === "http") {
+    await startHttpServer(cfg, http);
+    return;
+  }
 
   const server = buildMcpServer(cfg);
   const transport = new StdioServerTransport();
