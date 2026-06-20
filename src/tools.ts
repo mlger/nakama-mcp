@@ -30,6 +30,21 @@ function asJsonString(v: unknown): string {
   return typeof v === "string" ? v : JSON.stringify(v ?? {});
 }
 
+// Coerce to a JSON object for proto fields the gateway decodes as a struct
+// (e.g. console notification `content`), accepting either an object or a JSON string.
+function asJsonObject(v: unknown): Record<string, unknown> {
+  if (v == null) return {};
+  if (typeof v === "string") {
+    try {
+      const parsed = JSON.parse(v);
+      return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      return {};
+    }
+  }
+  return v as Record<string, unknown>;
+}
+
 export function registerTools(server: McpServer, nakama: NakamaClient): void {
   const counts = {
     total: actions.length,
@@ -321,7 +336,7 @@ export function registerTools(server: McpServer, nakama: NakamaClient): void {
     },
     async ({ user_id, subject, content, code, persistent }) => {
       try {
-        const body = { user_id, subject, content: asJsonString(content ?? {}), code: code ?? 0, persistent: persistent ?? true };
+        const body = { user_id, subject, content: asJsonObject(content), code: code ?? 0, persistent: persistent ?? true };
         return ok((await nakama.request({ surface: "console", method: "POST", path: "/v2/console/notification", body })) ?? { ok: true });
       } catch (err) {
         return fail(err);
