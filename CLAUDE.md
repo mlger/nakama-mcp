@@ -17,7 +17,8 @@ Nakama exposes ~180 operations, so rather than one tool per endpoint the server 
 npm run build              # tsc -> dist/
 npm run dev                # tsc --watch
 npm test                   # fast suite, no server: resolve + redact + smoke + http + http-reaper
-npm run test:integration   # live suite: needs `docker compose up -d --wait` first
+npm run test:integration   # live suite over stdio: needs `docker compose up -d --wait` first
+npm run test:http-integration   # live suite over the streamable-HTTP transport (same prerequisite)
 MCP_TRANSPORT=http MCP_AUTH_TOKEN=s3cret npm start   # run as a remote HTTP server (default is stdio)
 npm run regen-catalog          # rebuild data/catalog.json from Nakama master (needs network)
 npm run regen-catalog -- v3.37.0   # ...from a specific git ref/tag
@@ -34,7 +35,8 @@ node test/http.test.mjs          # also: npm run test:http (spawns server in htt
 node test/http-config.test.mjs   # config parsing + bind security guardrail
 node test/console-auth.test.mjs  # shared ConsoleAuth holder / in-flight login guard
 node test/http-reaper.test.mjs   # also: npm run test:http-reaper (idle-session reaper)
-node test/integration.mjs       # also: npm run test:integration (live server)
+node test/integration.mjs        # also: npm run test:integration (live server over stdio)
+node test/http-integration.test.mjs  # also: npm run test:http-integration (live server over HTTP)
 ```
 
 There is **no linter**; `tsc` (strict mode) is the type gate. Always `npm run build` before running tests, since tests load `dist/`.
@@ -79,6 +81,6 @@ Generated, **committed**, and shipped (listed in `package.json` `files`). `scrip
 Two tiers, both gating CI (`.github/workflows/ci.yml`):
 
 - **fast** (`npm test` = `resolve` + `redact` + `smoke` + `http` + `http-reaper`) — pure unit + MCP protocol surface (stdio **and** HTTP), no Nakama. The HTTP test spawns the built server on an ephemeral port and drives it with the SDK client; `tools/list` needs no Nakama. The CI `smoke` job runs these five as individual steps. Run on every change.
-- **integration** — boots Nakama 3.37.0 + CockroachDB via `docker-compose.yml` (`docker compose up --wait`), then drives the built server over stdio end-to-end (tools/list, console login + status, list/get account, device auth, storage write/read). Honors the same `NAKAMA_*` env vars; defaults match the bundled compose. `VERBOSE=1` surfaces server logs.
+- **integration** — boots Nakama 3.37.0 + CockroachDB via `docker-compose.yml` (`docker compose up --wait`), then drives the built server end-to-end in **two** transports: `test/integration.mjs` over stdio, and `test/http-integration.test.mjs` over the streamable-HTTP transport. The HTTP one additionally verifies per-session player isolation (each MCP session gets its own `NakamaClient`/player session, distinct from other sessions). Honors the same `NAKAMA_*` env vars; defaults match the bundled compose. `VERBOSE=1` surfaces server logs.
 
-Run `npm run build && npm test` before any PR; run integration too if you touch the client, tools, or catalog.
+Run `npm run build && npm test` before any PR; run both integration suites if you touch the client, tools, catalog, or the HTTP transport.

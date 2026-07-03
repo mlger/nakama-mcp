@@ -22,6 +22,7 @@
     "regen-catalog": "node scripts/regen-catalog.mjs",
     "prepublishOnly": "npm run build",
     "test:integration": "node test/integration.mjs",
+    "test:http-integration": "node test/http-integration.test.mjs",
     "test:smoke": "node test/smoke.mjs",
     "test:resolve": "node test/resolve.test.mjs",
     "test:http": "node test/http.test.mjs",
