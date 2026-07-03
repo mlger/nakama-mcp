@@ -192,13 +192,17 @@ A `docker-compose.yml` (Nakama 3.37.0 + CockroachDB) and a live integration test
 docker compose up -d          # start Nakama + DB (wait until healthy)
 npm run build
 npm run test:integration      # drives the MCP server over stdio against the live server
+npm run test:http-integration # same, but over the streamable-HTTP transport (SDK client)
 docker compose down -v        # stop and wipe
 ```
 
-The test exercises the full path end to end: `tools/list`, console auto-login + status,
+The **stdio** test exercises the full path end to end: `tools/list`, console auto-login + status,
 list accounts, player device authentication, `GetAccount`, and a storage write/read round-trip.
-It prints a PASS/FAIL summary and exits non-zero on any failure, so it is CI-friendly.
-Set `VERBOSE=1` to see server logs. It honors the same `NAKAMA_*` env vars as the server
+The **HTTP** test drives the same live backend over the streamable-HTTP transport and also
+verifies the per-session player-session isolation that only the HTTP transport provides
+(each MCP session gets its own `NakamaClient` / player session).
+Both print a PASS/FAIL summary and exit non-zero on any failure, so they are CI-friendly.
+Set `VERBOSE=1` to see server logs. They honor the same `NAKAMA_*` env vars as the server
 (defaults already match the bundled compose).
 
 ## Continuous integration
@@ -212,7 +216,8 @@ Run the same checks locally:
 
 ```bash
 npm test                   # full fast suite, no server needed
-npm run test:integration   # needs `docker compose up -d`
+npm run test:integration   # needs `docker compose up -d` (stdio)
+npm run test:http-integration  # needs `docker compose up -d` (HTTP transport)
 ```
 
 ## Regenerating the API catalog

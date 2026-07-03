@@ -54,6 +54,16 @@ jobs:
           NAKAMA_CONSOLE_USERNAME: admin
           NAKAMA_CONSOLE_PASSWORD: password
 
+      - name: Run HTTP integration tests
+        run: npm run test:http-integration
+        env:
+          NAKAMA_HOST: 127.0.0.1
+          NAKAMA_PORT: "7350"
+          NAKAMA_CONSOLE_PORT: "7351"
+          NAKAMA_SERVER_KEY: defaultkey
+          NAKAMA_CONSOLE_USERNAME: admin
+          NAKAMA_CONSOLE_PASSWORD: password
+
       - name: Dump Nakama logs on failure
         if: failure()
         run: docker compose logs --no-color
